@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>IoT MQTT Dashboard</title>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+        }
+
+        .header {
+            background: #18275c;
+            color: white;
+            text-align: center;
+            padding: 35px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 38px;
+        }
+
+        .header p {
+            font-size: 18px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 40px auto;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 35px 20px;
+            text-align: center;
+            border-radius: 18px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            font-size: 24px;
+        }
+
+        .value {
+            font-size: 34px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .green {
+            color: green;
+        }
+
+        .red {
+            color: red;
+        }
+
+        .normal {
+            color: green;
+        }
+
+        .warning {
+            color: red;
+        }
+
+        .update {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        #error {
+            display: none;
+            background: #ffdada;
+            color: red;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        @media(max-width:900px) {
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+        }
+
+        @media(max-width:600px) {
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="header">
+
+    <h1>🌡️ IoT MQTT Dashboard</h1>
+
+    <p>
+        ESP8266 + DHT11 + Relay + MQTT
+    </p>
+
+</div>
+
+
+<div class="container">
+
+
+    <div class="cards">
+
+
+        <!-- TEMPERATURE -->
+
+        <div class="card">
+
+            <h2>🌡️ Temperature</h2>
+
+            <div
+                id="temperature"
+                class="value">
+                Loading...
+            </div>
+
+        </div>
+
+
+        <!-- RELAY -->
+
+        <div class="card">
+
+            <h2>🔌 Relay</h2>
+
+            <div
+                id="relay"
+                class="value">
+                Loading...
+            </div>
+
+        </div>
+
+
+        <!-- STATUS -->
+
+        <div class="card">
+
+            <h2>⚠️ Status</h2>
+
+            <div
+                id="status"
+                class="value">
+                Loading...
+            </div>
+
+        </div>
+
+
+        <!-- MQTT -->
+
+        <div class="card">
+
+            <h2>📡 MQTT</h2>
+
+            <div
+                id="mqtt"
+                class="value">
+                Loading...
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <div id="error">
+
+        ❌ Cannot connect to Flask API
+
+    </div>
+
+
+    <div class="update">
+
+        Last Update:
+        <strong id="lastUpdate">--</strong>
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+
+// ==================================================
+// UPDATE DASHBOARD
+// ==================================================
+
+async function updateDashboard() {
+
+    try {
+
+        console.log("Fetching API...");
+
+
+        const response = await fetch(
+            "/api/data?time=" + Date.now(),
+            {
+                cache: "no-store"
+            }
+        );
+
+
+        console.log(
+            "API status:",
+            response.status
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "API returned error"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "DATA FROM FLASK:",
+            data
+        );
+
+
+        // ------------------------------------------
+        // TEMPERATURE
+        // ------------------------------------------
+
+        const temperature =
+            Number(data.temperature);
+
+
+        document.getElementById(
+            "temperature"
+        ).innerText =
+            temperature.toFixed(1) + " °C";
+
+
+        // ------------------------------------------
+        // RELAY
+        // ------------------------------------------
+
+        const relay =
+            document.getElementById("relay");
+
+
+        relay.innerText =
+            data.relay;
+
+
+        if (data.relay === "ON") {
+
+            relay.className =
+                "value red";
+
+        }
+
+        else {
+
+            relay.className =
+                "value green";
+
+        }
+
+
+        // ------------------------------------------
+        // STATUS
+        // ------------------------------------------
+
+        const status =
+            document.getElementById("status");
+
+
+        status.innerText =
+            data.warning;
+
+
+        if (temperature > 30) {
+
+            status.className =
+                "value warning";
+
+        }
+
+        else {
+
+            status.className =
+                "value normal";
+
+        }
+
+
+        // ------------------------------------------
+        // MQTT
+        // ------------------------------------------
+
+        const mqtt =
+            document.getElementById("mqtt");
+
+
+        if (data.mqtt_connected === true) {
+
+            mqtt.innerText =
+                "CONNECTED";
+
+            mqtt.className =
+                "value green";
+
+        }
+
+        else {
+
+            mqtt.innerText =
+                "DISCONNECTED";
+
+            mqtt.className =
+                "value red";
+
+        }
+
+
+        // ------------------------------------------
+        // LAST UPDATE
+        // ------------------------------------------
+
+        document.getElementById(
+            "lastUpdate"
+        ).innerText =
+            data.last_update;
+
+
+        // Hide error
+
+        document.getElementById(
+            "error"
+        ).style.display = "none";
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "DASHBOARD ERROR:",
+            error
+        );
+
+
+        document.getElementById(
+            "error"
+        ).style.display = "block";
+
+    }
+
+}
+
+
+// ==================================================
+// START
+// ==================================================
+
+updateDashboard();
+
+
+// Update every 2 seconds
+
+setInterval(
+    updateDashboard,
+    2000
+);
+
+
+</script>
+
+
+</body>
+
+</html>
